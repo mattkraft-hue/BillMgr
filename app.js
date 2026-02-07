@@ -1,5 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Users, FileText, Settings, Plus, ChevronRight, AlertCircle, CheckCircle, X, Menu, Lock, Unlock, Key, Shield, UserPlus, LogOut, User } from 'lucide-react';
+// BCBA Billing Tracker - Browser-ready version
+// Uses global React, ReactDOM, and Lucide from CDN
+
+const { useState, useEffect } = React;
+const { 
+  Calendar, Clock, Users, FileText, Settings, Plus, ChevronRight, 
+  AlertCircle, CheckCircle, X, Menu, Lock, Unlock, Key, Shield, 
+  UserPlus, LogOut, User 
+} = lucide;
 
 // Encryption utilities using Web Crypto API
 class CryptoManager {

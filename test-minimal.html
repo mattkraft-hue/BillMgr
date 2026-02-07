@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BCBA Tracker - Test</title>
+    
+    <!-- React -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        body { margin: 0; font-family: system-ui, -apple-system, sans-serif; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script>
+        console.log('🔍 Test 1: React loaded?', typeof React !== 'undefined');
+        console.log('🔍 Test 2: ReactDOM loaded?', typeof ReactDOM !== 'undefined');
+        
+        // Create a simple test component
+        const TestApp = () => {
+            const [message, setMessage] = React.useState('App is working!');
+            
+            return React.createElement('div', {
+                style: {
+                    minHeight: '100vh',
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'white',
+                    textAlign: 'center',
+                    padding: '40px'
+                }
+            },
+                React.createElement('div', null,
+                    React.createElement('h1', { style: { fontSize: '48px', marginBottom: '20px' } }, '✅ Success!'),
+                    React.createElement('p', { style: { fontSize: '24px', marginBottom: '30px' } }, message),
+                    React.createElement('p', { style: { fontSize: '16px', opacity: 0.9 } }, 'If you see this, React is working correctly!'),
+                    React.createElement('p', { style: { fontSize: '14px', marginTop: '40px', opacity: 0.8 } }, 
+                        'The problem is not with React - it\'s with Babel compiling the large app.js file.'
+                    ),
+                    React.createElement('button', {
+                        onClick: () => setMessage('Button clicks work too!'),
+                        style: {
+                            marginTop: '30px',
+                            padding: '12px 24px',
+                            background: 'white',
+                            color: '#667eea',
+                            border: 'none',
+                            borderRadius: '8px',
+                            fontSize: '16px',
+                            fontWeight: 'bold',
+                            cursor: 'pointer'
+                        }
+                    }, 'Click Me!')
+                )
+            );
+        };
+        
+        console.log('🔍 Test 3: Creating React root...');
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        
+        console.log('🔍 Test 4: Rendering app...');
+        root.render(React.createElement(TestApp));
+        
+        console.log('✅ If you see the app, React works! The issue is Babel compilation.');
+    </script>
+</body>
+</html>

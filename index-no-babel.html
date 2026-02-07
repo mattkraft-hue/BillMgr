@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="BCBA Tracker">
+    <meta name="theme-color" content="#3B82F6">
+    <meta name="description" content="Secure billing management for BCBA professionals in Indiana">
+    <title>BCBA Billing Tracker</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🔒%3C/text%3E%3C/svg%3E">
+    
+    <!-- React -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    
+    <!-- SheetJS for Excel -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    
+    <style>
+        * {
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+                'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+                sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overflow: hidden;
+        }
+        
+        #root {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        #loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .loader {
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #3B82F6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading">
+        <div style="text-align: center; color: white;">
+            <div class="loader" style="margin: 0 auto 20px;"></div>
+            <h2 style="margin: 0; font-size: 24px;">BCBA Billing Tracker</h2>
+            <p id="status" style="margin: 10px 0 0; opacity: 0.9;">Loading...</p>
+        </div>
+    </div>
+    
+    <!-- Main App -->
+    <div id="root" style="display: none;"></div>
+
+    <!-- Persistent Storage Implementation -->
+    <script>
+        console.log('Step 1: Initializing storage...');
+        
+        class PersistentStorage {
+            constructor() {
+                this.prefix = 'bcba-storage-';
+            }
+
+            async get(key) {
+                try {
+                    const value = localStorage.getItem(this.prefix + key);
+                    return value ? { key, value } : null;
+                } catch (error) {
+                    console.error('Storage get error:', error);
+                    return null;
+                }
+            }
+
+            async set(key, value) {
+                try {
+                    localStorage.setItem(this.prefix + key, value);
+                    return { key, value };
+                } catch (error) {
+                    console.error('Storage set error:', error);
+                    return null;
+                }
+            }
+
+            async delete(key) {
+                try {
+                    const existed = localStorage.getItem(this.prefix + key) !== null;
+                    localStorage.removeItem(this.prefix + key);
+                    return { key, deleted: existed };
+                } catch (error) {
+                    console.error('Storage delete error:', error);
+                    return { key, deleted: false };
+                }
+            }
+
+            async list(prefix) {
+                try {
+                    const keys = [];
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key.startsWith(this.prefix)) {
+                            const cleanKey = key.substring(this.prefix.length);
+                            if (!prefix || cleanKey.startsWith(prefix)) {
+                                keys.push(cleanKey);
+                            }
+                        }
+                    }
+                    return { keys, prefix };
+                } catch (error) {
+                    console.error('Storage list error:', error);
+                    return { keys: [], prefix };
+                }
+            }
+        }
+
+        window.storage = new PersistentStorage();
+        console.log('✅ Storage initialized');
+    </script>
+
+    <!-- Load App WITHOUT Babel - just plain JavaScript -->
+    <script>
+        const updateStatus = (msg) => {
+            const el = document.getElementById('status');
+            if (el) el.textContent = msg;
+            console.log(msg);
+        };
+
+        updateStatus('Checking libraries...');
+        
+        // Check all required libraries
+        const checkLibraries = () => {
+            const libs = {
+                React: typeof React !== 'undefined',
+                ReactDOM: typeof ReactDOM !== 'undefined',
+                lucide: typeof lucide !== 'undefined',
+                XLSX: typeof XLSX !== 'undefined'
+            };
+            
+            console.log('Library check:', libs);
+            
+            for (const [name, loaded] of Object.entries(libs)) {
+                if (!loaded) {
+                    throw new Error(`${name} library not loaded`);
+                }
+            }
+            
+            return true;
+        };
+
+        window.addEventListener('load', async () => {
+            try {
+                updateStatus('Libraries loaded, loading app...');
+                checkLibraries();
+                
+                updateStatus('Loading app component...');
+                
+                // Load the app.js file
+                const script = document.createElement('script');
+                script.src = 'app.js';
+                script.onload = () => {
+                    console.log('✅ app.js loaded');
+                    updateStatus('Starting app...');
+                    
+                    // Wait for component to be available
+                    let attempts = 0;
+                    const checkInterval = setInterval(() => {
+                        attempts++;
+                        
+                        if (window.BCBABillingTracker) {
+                            clearInterval(checkInterval);
+                            
+                            try {
+                                console.log('✅ Component found, rendering...');
+                                document.getElementById('loading').style.display = 'none';
+                                document.getElementById('root').style.display = 'block';
+                                
+                                const root = ReactDOM.createRoot(document.getElementById('root'));
+                                root.render(React.createElement(window.BCBABillingTracker));
+                                
+                                console.log('✅ App loaded successfully!');
+                            } catch (error) {
+                                console.error('❌ Render error:', error);
+                                showError('Render Error', error.message);
+                            }
+                        } else if (attempts > 10) {
+                            clearInterval(checkInterval);
+                            console.error('❌ Component not found after 10 seconds');
+                            showError('Component Not Found', 
+                                'The BCBABillingTracker component did not load.\n\n' +
+                                'This usually means there is a syntax error in app.js.\n\n' +
+                                'Please check the browser console (F12) for errors.');
+                        }
+                    }, 1000);
+                };
+                
+                script.onerror = (error) => {
+                    console.error('❌ Failed to load app.js:', error);
+                    showError('File Load Error', 
+                        'Could not load app.js file.\n\n' +
+                        'Please check:\n' +
+                        '1. File is uploaded to GitHub\n' +
+                        '2. Filename is exactly "app.js"\n' +
+                        '3. No network errors');
+                };
+                
+                document.head.appendChild(script);
+                
+            } catch (error) {
+                console.error('❌ Error:', error);
+                showError('Loading Error', error.message);
+            }
+        });
+
+        function showError(title, message) {
+            const loading = document.getElementById('loading');
+            if (loading) {
+                loading.innerHTML = `
+                    <div style="text-align: center; color: white; padding: 40px; max-width: 600px;">
+                        <h2 style="margin: 0; font-size: 24px; color: #ff6b6b; margin-bottom: 20px;">
+                            ${title}
+                        </h2>
+                        <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 12px; margin: 20px 0;">
+                            <pre style="white-space: pre-wrap; font-size: 14px; margin: 0; text-align: left;">${message}</pre>
+                        </div>
+                        <div style="margin-top: 30px;">
+                            <button onclick="location.reload()" style="background: white; color: #667eea; border: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; margin: 5px;">
+                                🔄 Refresh Page
+                            </button>
+                            <button onclick="window.location.href='test-minimal.html'" style="background: rgba(255,255,255,0.2); color: white; border: 2px solid white; padding: 12px 24px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; margin: 5px;">
+                                🧪 Test React
+                            </button>
+                            <button onclick="window.location.href='diagnostic.html'" style="background: rgba(255,255,255,0.2); color: white; border: 2px solid white; padding: 12px 24px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; margin: 5px;">
+                                🔍 Run Diagnostic
+                            </button>
+                        </div>
+                        <p style="margin-top: 20px; font-size: 12px; opacity: 0.8;">
+                            Press F12 to open Developer Console for detailed errors
+                        </p>
+                    </div>
+                `;
+            }
+        }
+
+        // Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(reg => console.log('✅ Service Worker registered'))
+                    .catch(err => console.log('⚠️ Service Worker registration failed:', err));
+            });
+        }
+    </script>
+</body>
+</html>

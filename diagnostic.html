@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BCBA Tracker - Diagnostic</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            padding: 20px;
+            max-width: 1000px;
+            margin: 0 auto;
+            background: #f5f5f5;
+        }
+        h1 { color: #667eea; }
+        h2 { color: #764ba2; margin-top: 30px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 8px; }
+        .pass { background: #d4edda; border-left: 4px solid #28a745; }
+        .fail { background: #f8d7da; border-left: 4px solid #dc3545; }
+        .warn { background: #fff3cd; border-left: 4px solid #ffc107; }
+        .info { background: #d1ecf1; border-left: 4px solid #0c5460; padding: 15px; margin: 20px 0; border-radius: 8px; }
+        pre { background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 8px; overflow-x: auto; }
+        button { padding: 10px 20px; margin: 10px 5px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .primary { background: #667eea; color: white; }
+        .secondary { background: #6c757d; color: white; }
+        #console-output { max-height: 400px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔬 BCBA Tracker Diagnostic Tool</h1>
+    
+    <div class="info">
+        <strong>Purpose:</strong> This page will help diagnose why the app won't load.
+        It performs detailed checks and captures all console output.
+    </div>
+
+    <h2>🌐 Environment Information</h2>
+    <div id="env-info"></div>
+
+    <h2>📦 Library Loading Test</h2>
+    <div id="library-test"></div>
+
+    <h2>📄 File Accessibility Test</h2>
+    <div id="file-test"></div>
+
+    <h2>🔧 Babel Compilation Test</h2>
+    <div id="babel-test"></div>
+
+    <h2>📊 Console Output</h2>
+    <div id="console-output"></div>
+
+    <h2>🎯 Actions</h2>
+    <button class="primary" onclick="runAllTests()">🔄 Re-run All Tests</button>
+    <button class="secondary" onclick="downloadReport()">💾 Download Report</button>
+    <button class="primary" onclick="window.location.href='index.html'">🚀 Try Loading App</button>
+
+    <script>
+        let consoleLog = [];
+        
+        // Capture console output
+        const oldLog = console.log;
+        const oldError = console.error;
+        const oldWarn = console.warn;
+        
+        console.log = function(...args) {
+            consoleLog.push({type: 'log', time: new Date().toISOString(), message: args.join(' ')});
+            oldLog.apply(console, arguments);
+            updateConsoleOutput();
+        };
+        
+        console.error = function(...args) {
+            consoleLog.push({type: 'error', time: new Date().toISOString(), message: args.join(' ')});
+            oldError.apply(console, arguments);
+            updateConsoleOutput();
+        };
+        
+        console.warn = function(...args) {
+            consoleLog.push({type: 'warn', time: new Date().toISOString(), message: args.join(' ')});
+            oldWarn.apply(console, arguments);
+            updateConsoleOutput();
+        };
+
+        function updateConsoleOutput() {
+            const output = document.getElementById('console-output');
+            output.innerHTML = '<pre>' + consoleLog.map(log => {
+                const icon = log.type === 'error' ? '❌' : log.type === 'warn' ? '⚠️' : 'ℹ️';
+                return `${icon} [${log.time}] ${log.message}`;
+            }).join('\n') + '</pre>';
+        }
+
+        function showEnvInfo() {
+            const info = document.getElementById('env-info');
+            const ua = navigator.userAgent;
+            
+            info.innerHTML = `
+                <div class="status info">
+                    <strong>Browser:</strong> ${navigator.appName} ${navigator.appVersion.split(')')[0]}<br>
+                    <strong>Platform:</strong> ${navigator.platform}<br>
+                    <strong>User Agent:</strong> ${ua}<br>
+                    <strong>Screen Size:</strong> ${window.innerWidth} × ${window.innerHeight}<br>
+                    <strong>Cookies Enabled:</strong> ${navigator.cookieEnabled ? 'Yes' : 'No'}<br>
+                    <strong>localStorage Available:</strong> ${typeof localStorage !== 'undefined' ? 'Yes' : 'No'}<br>
+                    <strong>Current URL:</strong> ${window.location.href}
+                </div>
+            `;
+        }
+
+        async function testLibraries() {
+            console.log('🔍 Testing library loading...');
+            const libs = document.getElementById('library-test');
+            
+            const tests = [
+                { name: 'React', check: () => typeof React !== 'undefined', url: 'https://unpkg.com/react@18/umd/react.production.min.js' },
+                { name: 'ReactDOM', check: () => typeof ReactDOM !== 'undefined', url: 'https://unpkg.com/react-dom@18/umd/react-dom.production.min.js' },
+                { name: 'Babel', check: () => typeof Babel !== 'undefined', url: 'https://unpkg.com/@babel/standalone/babel.min.js' },
+                { name: 'XLSX', check: () => typeof XLSX !== 'undefined', url: 'https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js' },
+                { name: 'lucide', check: () => typeof lucide !== 'undefined', url: 'https://unpkg.com/lucide@latest' }
+            ];
+
+            let html = '';
+            for (const test of tests) {
+                const loaded = test.check();
+                console.log(`${test.name}: ${loaded ? '✅' : '❌'}`);
+                html += `
+                    <div class="status ${loaded ? 'pass' : 'fail'}">
+                        <strong>${loaded ? '✅' : '❌'} ${test.name}</strong><br>
+                        <small>URL: ${test.url}</small>
+                    </div>
+                `;
+            }
+            
+            libs.innerHTML = html;
+        }
+
+        async function testFileAccess() {
+            console.log('🔍 Testing file accessibility...');
+            const files = document.getElementById('file-test');
+            
+            const filesToTest = ['app.js', 'manifest.json', 'service-worker.js'];
+            let html = '';
+            
+            for (const file of filesToTest) {
+                try {
+                    const response = await fetch(file, { method: 'HEAD' });
+                    const exists = response.ok;
+                    const size = response.headers.get('content-length');
+                    console.log(`${file}: ${exists ? `✅ Found (${size} bytes)` : '❌ Not found'}`);
+                    
+                    html += `
+                        <div class="status ${exists ? 'pass' : 'fail'}">
+                            <strong>${exists ? '✅' : '❌'} ${file}</strong>
+                            ${exists && size ? `<br><small>Size: ${(size / 1024).toFixed(2)} KB</small>` : ''}
+                            ${!exists ? '<br><small>File not found on server</small>' : ''}
+                        </div>
+                    `;
+                } catch (error) {
+                    console.error(`Error checking ${file}:`, error);
+                    html += `
+                        <div class="status fail">
+                            <strong>❌ ${file}</strong><br>
+                            <small>Error: ${error.message}</small>
+                        </div>
+                    `;
+                }
+            }
+            
+            files.innerHTML = html;
+        }
+
+        async function testBabelCompilation() {
+            console.log('🔍 Testing Babel compilation...');
+            const babel = document.getElementById('babel-test');
+            
+            if (typeof Babel === 'undefined') {
+                babel.innerHTML = `<div class="status fail">❌ Babel not loaded - cannot test compilation</div>`;
+                return;
+            }
+
+            try {
+                const testCode = 'const Test = () => <div>Hello</div>;';
+                console.log('Testing simple JSX compilation...');
+                const result = Babel.transform(testCode, { presets: ['react'] });
+                console.log('✅ Babel compilation successful');
+                
+                babel.innerHTML = `
+                    <div class="status pass">
+                        <strong>✅ Babel Working</strong><br>
+                        <small>Successfully compiled test JSX code</small>
+                    </div>
+                `;
+                
+                // Now try to load actual app.js
+                console.log('Attempting to load app.js...');
+                const response = await fetch('app.js');
+                const appCode = await response.text();
+                console.log(`app.js size: ${(appCode.length / 1024).toFixed(2)} KB`);
+                
+                babel.innerHTML += `
+                    <div class="status info">
+                        <strong>ℹ️ app.js File Info</strong><br>
+                        Size: ${(appCode.length / 1024).toFixed(2)} KB (${appCode.length} characters)<br>
+                        Lines: ${appCode.split('\n').length}<br>
+                        <small>Note: Large files take 10-60 seconds to compile with Babel</small>
+                    </div>
+                `;
+                
+                console.log('Starting full app.js compilation...');
+                babel.innerHTML += `
+                    <div class="status warn">
+                        <strong>⏳ Compiling app.js...</strong><br>
+                        <small>This may take 10-60 seconds for a ${(appCode.length / 1024).toFixed(2)} KB file...</small>
+                    </div>
+                `;
+                
+                const startTime = performance.now();
+                const compiled = Babel.transform(appCode, { presets: ['react'] });
+                const endTime = performance.now();
+                const compileTime = ((endTime - startTime) / 1000).toFixed(2);
+                
+                console.log(`✅ app.js compiled successfully in ${compileTime} seconds`);
+                
+                babel.innerHTML = `
+                    <div class="status pass">
+                        <strong>✅ Babel Working</strong><br>
+                        Test compilation: Success<br>
+                        app.js compilation: Success (${compileTime} seconds)
+                    </div>
+                `;
+            } catch (error) {
+                console.error('❌ Babel compilation failed:', error);
+                babel.innerHTML = `
+                    <div class="status fail">
+                        <strong>❌ Babel Compilation Failed</strong><br>
+                        Error: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        async function runAllTests() {
+            consoleLog = [];
+            console.log('🚀 Starting diagnostic tests...');
+            
+            showEnvInfo();
+            
+            // Wait for libraries to load
+            setTimeout(async () => {
+                await testLibraries();
+                await testFileAccess();
+                await testBabelCompilation();
+                console.log('✅ All tests complete');
+            }, 1000);
+        }
+
+        function downloadReport() {
+            const report = {
+                timestamp: new Date().toISOString(),
+                userAgent: navigator.userAgent,
+                url: window.location.href,
+                console: consoleLog,
+                libraries: {
+                    React: typeof React !== 'undefined',
+                    ReactDOM: typeof ReactDOM !== 'undefined',
+                    Babel: typeof Babel !== 'undefined',
+                    XLSX: typeof XLSX !== 'undefined',
+                    lucide: typeof lucide !== 'undefined'
+                }
+            };
+            
+            const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `bcba-diagnostic-${Date.now()}.json`;
+            a.click();
+        }
+
+        // Auto-run tests on load
+        window.addEventListener('load', () => {
+            runAllTests();
+        });
+    </script>
+
+    <!-- Load CDN libraries -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</body>
+</html>

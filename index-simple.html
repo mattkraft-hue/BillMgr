@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BCBA Billing Tracker - Simple Load</title>
+    
+    <!-- React from CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    
+    <!-- SheetJS -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    
+    <style>
+        * { -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; font-family: system-ui, -apple-system, sans-serif; }
+        #loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .spinner {
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">
+        <div style="text-align: center; color: white;">
+            <div class="spinner" style="margin: 0 auto 20px;"></div>
+            <h2>Loading BCBA Tracker...</h2>
+            <p id="status">Initializing...</p>
+        </div>
+    </div>
+    <div id="root" style="display: none;"></div>
+
+    <script>
+        const updateStatus = (msg) => {
+            const status = document.getElementById('status');
+            if (status) status.textContent = msg;
+            console.log('📍', msg);
+        };
+
+        // Check all libraries loaded
+        updateStatus('Checking libraries...');
+        
+        const checkLibraries = () => {
+            const checks = {
+                'React': typeof React !== 'undefined',
+                'ReactDOM': typeof ReactDOM !== 'undefined',
+                'Lucide': typeof lucide !== 'undefined',
+                'XLSX': typeof XLSX !== 'undefined'
+            };
+            
+            console.log('Library status:', checks);
+            
+            for (const [lib, loaded] of Object.entries(checks)) {
+                if (!loaded) {
+                    console.error(`❌ ${lib} not loaded`);
+                    updateStatus(`Error: ${lib} not loaded`);
+                    return false;
+                }
+            }
+            return true;
+        };
+
+        // Wait for all libraries to load
+        window.addEventListener('load', () => {
+            updateStatus('Libraries loaded, checking app...');
+            
+            if (!checkLibraries()) {
+                document.getElementById('loading').innerHTML = `
+                    <div style="text-align: center; color: white; padding: 40px;">
+                        <h2 style="color: #ff6b6b;">❌ Library Loading Failed</h2>
+                        <p>One or more required libraries did not load.</p>
+                        <p style="font-size: 14px; margin-top: 20px;">Please check:</p>
+                        <ul style="text-align: left; display: inline-block;">
+                            <li>Internet connection</li>
+                            <li>Ad blockers disabled</li>
+                            <li>Browser is up to date</li>
+                        </ul>
+                        <button onclick="location.reload()" style="margin-top: 20px; padding: 12px 24px; background: white; color: #667eea; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
+                            Retry
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            // Try loading with Babel
+            updateStatus('Loading app component...');
+            const script = document.createElement('script');
+            script.type = 'text/babel';
+            script.src = 'app.js';
+            script.onerror = () => {
+                console.error('❌ Failed to load app.js');
+                document.getElementById('loading').innerHTML = `
+                    <div style="text-align: center; color: white; padding: 40px;">
+                        <h2 style="color: #ff6b6b;">❌ Failed to Load App</h2>
+                        <p>Could not load app.js file.</p>
+                        <p style="font-size: 14px; margin-top: 20px;">Possible causes:</p>
+                        <ul style="text-align: left; display: inline-block;">
+                            <li>File not uploaded to server</li>
+                            <li>Incorrect file path</li>
+                            <li>Network error</li>
+                        </ul>
+                        <button onclick="location.reload()" style="margin-top: 20px; padding: 12px 24px; background: white; color: #667eea; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
+                            Retry
+                        </button>
+                    </div>
+                `;
+            };
+            document.head.appendChild(script);
+
+            // Wait for component to be available
+            let attempts = 0;
+            const maxAttempts = 60;
+            
+            const checkComponent = setInterval(() => {
+                attempts++;
+                updateStatus(`Compiling... (${attempts}s)`);
+                
+                if (window.BCBABillingTracker) {
+                    clearInterval(checkComponent);
+                    updateStatus('Rendering app...');
+                    
+                    try {
+                        document.getElementById('loading').style.display = 'none';
+                        document.getElementById('root').style.display = 'block';
+                        
+                        const root = ReactDOM.createRoot(document.getElementById('root'));
+                        root.render(React.createElement(window.BCBABillingTracker));
+                        
+                        console.log('✅ App loaded successfully!');
+                    } catch (error) {
+                        console.error('❌ Render error:', error);
+                        document.getElementById('loading').style.display = 'flex';
+                        document.getElementById('loading').innerHTML = `
+                            <div style="text-align: center; color: white; padding: 40px;">
+                                <h2 style="color: #ff6b6b;">❌ Render Error</h2>
+                                <p>${error.message}</p>
+                                <button onclick="location.reload()" style="margin-top: 20px; padding: 12px 24px; background: white; color: #667eea; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
+                                    Retry
+                                </button>
+                            </div>
+                        `;
+                    }
+                } else if (attempts >= maxAttempts) {
+                    clearInterval(checkComponent);
+                    console.error('❌ Timeout waiting for component');
+                    document.getElementById('loading').innerHTML = `
+                        <div style="text-align: center; color: white; padding: 40px; max-width: 600px;">
+                            <h2 style="color: #ff6b6b;">⏱️ Loading Timeout</h2>
+                            <p style="margin: 20px 0;">The app is taking too long to load (${maxAttempts}+ seconds).</p>
+                            
+                            <div style="background: rgba(0,0,0,0.2); padding: 20px; border-radius: 12px; margin: 20px 0; text-align: left;">
+                                <strong>Most common causes:</strong>
+                                <ol style="margin: 10px 0; padding-left: 20px;">
+                                    <li style="margin: 5px 0;">Babel taking too long to compile 2000+ line app.js</li>
+                                    <li style="margin: 5px 0;">Slow computer/device</li>
+                                    <li style="margin: 5px 0;">Syntax error in app.js</li>
+                                </ol>
+                            </div>
+
+                            <div style="background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; margin: 20px 0; text-align: left; font-size: 14px;">
+                                <strong>What to do:</strong>
+                                <ol style="margin: 10px 0; padding-left: 20px;">
+                                    <li>Open DevTools (F12) → Console tab</li>
+                                    <li>Look for red error messages</li>
+                                    <li>Try in Chrome (best compatibility)</li>
+                                    <li>Wait longer (can take 2+ minutes on slow devices)</li>
+                                </ol>
+                            </div>
+
+                            <button onclick="location.reload()" style="padding: 12px 24px; background: white; color: #667eea; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; margin: 5px;">
+                                🔄 Try Again
+                            </button>
+                            <button onclick="window.open('https://github.com/mattkraft-hue/BillMgr/issues', '_blank')" style="padding: 12px 24px; background: rgba(255,255,255,0.2); color: white; border: 2px solid white; border-radius: 8px; cursor: pointer; font-weight: bold; margin: 5px;">
+                                🐛 Report Issue
+                            </button>
+                        </div>
+                    `;
+                }
+            }, 1000);
+        });
+    </script>
+
+    <!-- Babel last - after everything else -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</body>
+</html>
