@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="BCBA Tracker">
+    <meta name="theme-color" content="#3B82F6">
+    <meta name="description" content="Secure billing management for BCBA professionals in Indiana">
+    <title>BCBA Billing Tracker</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🔒%3C/text%3E%3C/svg%3E">
+    
+    <!-- React -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel Standalone for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        * {
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+                'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+                sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overflow: hidden;
+        }
+        
+        #root {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        /* Loading spinner */
+        .loader {
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #3B82F6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* PWA Install prompt styles */
+        .install-prompt {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            padding: 16px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            max-width: 90%;
+            width: 400px;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .install-prompt.show {
+            display: block;
+            animation: slideUp 0.3s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from {
+                transform: translateX(-50%) translateY(100px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(-50%) translateY(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading" style="display: flex; align-items: center; justify-content: center; height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <div style="text-align: center; color: white;">
+            <div class="loader" style="margin: 0 auto 20px;"></div>
+            <h2 style="margin: 0; font-size: 24px;">BCBA Billing Tracker</h2>
+            <p style="margin: 10px 0 0; opacity: 0.9;">Loading secure environment...</p>
+        </div>
+    </div>
+    
+    <!-- Main App -->
+    <div id="root"></div>
+    
+    <!-- PWA Install Prompt -->
+    <div id="installPrompt" class="install-prompt">
+        <h3 style="margin: 0 0 8px; font-size: 16px; font-weight: bold;">Install BCBA Tracker</h3>
+        <p style="margin: 0 0 12px; font-size: 14px; color: #6b7280;">Install this app on your device for a better experience!</p>
+        <div style="display: flex; gap: 8px;">
+            <button id="installBtn" style="flex: 1; background: #3B82F6; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer;">
+                Install
+            </button>
+            <button id="dismissBtn" style="background: #e5e7eb; color: #374151; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer;">
+                Not Now
+            </button>
+        </div>
+    </div>
+
+    <!-- Mock Storage Implementation for GitHub Pages -->
+    <script>
+        // Persistent Storage using localStorage
+        class PersistentStorage {
+            constructor() {
+                this.prefix = 'bcba-storage-';
+            }
+
+            async get(key) {
+                try {
+                    const value = localStorage.getItem(this.prefix + key);
+                    return value ? { key, value } : null;
+                } catch (error) {
+                    console.error('Storage get error:', error);
+                    return null;
+                }
+            }
+
+            async set(key, value) {
+                try {
+                    localStorage.setItem(this.prefix + key, value);
+                    return { key, value };
+                } catch (error) {
+                    console.error('Storage set error:', error);
+                    return null;
+                }
+            }
+
+            async delete(key) {
+                try {
+                    const existed = localStorage.getItem(this.prefix + key) !== null;
+                    localStorage.removeItem(this.prefix + key);
+                    return { key, deleted: existed };
+                } catch (error) {
+                    console.error('Storage delete error:', error);
+                    return { key, deleted: false };
+                }
+            }
+
+            async list(prefix) {
+                try {
+                    const keys = [];
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key.startsWith(this.prefix)) {
+                            const cleanKey = key.substring(this.prefix.length);
+                            if (!prefix || cleanKey.startsWith(prefix)) {
+                                keys.push(cleanKey);
+                            }
+                        }
+                    }
+                    return { keys, prefix };
+                } catch (error) {
+                    console.error('Storage list error:', error);
+                    return { keys: [], prefix };
+                }
+            }
+        }
+
+        // Initialize storage
+        window.storage = new PersistentStorage();
+        console.log('✅ Persistent storage initialized');
+
+        // PWA Install functionality
+        let deferredPrompt;
+        const installPrompt = document.getElementById('installPrompt');
+        const installBtn = document.getElementById('installBtn');
+        const dismissBtn = document.getElementById('dismissBtn');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Show install prompt after 3 seconds
+            setTimeout(() => {
+                installPrompt.classList.add('show');
+            }, 3000);
+        });
+
+        installBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                console.log(`User response to install prompt: ${outcome}`);
+                deferredPrompt = null;
+            }
+            installPrompt.classList.remove('show');
+        });
+
+        dismissBtn.addEventListener('click', () => {
+            installPrompt.classList.remove('show');
+        });
+
+        // Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(reg => console.log('✅ Service Worker registered'))
+                    .catch(err => console.log('⚠️ Service Worker registration failed:', err));
+            });
+        }
+    </script>
+
+    <!-- Load and Render App -->
+    <script type="text/babel" src="app.js"></script>
+
+    <script type="text/babel">
+        // Hide loading screen and show app
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('root').style.display = 'block';
+        
+        // Render the app
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<BCBABillingTracker />);
+        
+        console.log('✅ BCBA Billing Tracker loaded successfully!');
+    </script>
+</body>
+</html>
