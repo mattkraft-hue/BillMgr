@@ -438,6 +438,194 @@ const BCBABillingTracker = () => {
     setActiveTab('dashboard');
   };
 
+  // Excel Export/Import Functions using SheetJS
+  const exportToExcel = () => {
+    try {
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+
+      // Sessions Sheet
+      const sessionsData = sessions.map(s => {
+        const client = clients.find(c => c.id === s.clientId);
+        const provider = providers.find(p => p.id === s.providerId);
+        return {
+          'Date': new Date(s.startTime).toLocaleDateString(),
+          'Start Time': new Date(s.startTime).toLocaleTimeString(),
+          'End Time': s.endTime ? new Date(s.endTime).toLocaleTimeString() : 'In Progress',
+          'Client Name': client?.name || 'Unknown',
+          'Client ID': client?.clientId || '',
+          'Provider': provider?.name || 'Unknown',
+          'Provider Type': provider?.type || '',
+          'CPT Code': s.cptCode,
+          'Location': s.location,
+          'Duration (min)': s.durationMinutes || 0,
+          'Units': s.units || 0,
+          'Notes': s.notes || '',
+          'Status': s.status || 'completed'
+        };
+      });
+      const sessionsSheet = XLSX.utils.json_to_sheet(sessionsData);
+      XLSX.utils.book_append_sheet(wb, sessionsSheet, 'Sessions');
+
+      // Clients Sheet
+      const clientsData = clients.map(c => ({
+        'Name': c.name,
+        'Client ID': c.clientId,
+        'Prior Auth Number': c.priorAuthNumber || '',
+        'Diagnosis Code': c.diagnosisCode || '',
+        'Created Date': new Date(c.createdAt).toLocaleDateString()
+      }));
+      const clientsSheet = XLSX.utils.json_to_sheet(clientsData);
+      XLSX.utils.book_append_sheet(wb, clientsSheet, 'Clients');
+
+      // Providers Sheet
+      const providersData = providers.map(p => ({
+        'Name': p.name,
+        'Type': p.type,
+        'NPI Number': p.npi,
+        'Credentials': p.credentials || '',
+        'Created Date': new Date(p.createdAt).toLocaleDateString()
+      }));
+      const providersSheet = XLSX.utils.json_to_sheet(providersData);
+      XLSX.utils.book_append_sheet(wb, providersSheet, 'Providers');
+
+      // Summary Sheet
+      const totalSessions = sessions.length;
+      const totalUnits = sessions.reduce((sum, s) => sum + (s.units || 0), 0);
+      const totalMinutes = sessions.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
+      const rbtSessions = sessions.filter(s => s.cptCode === '97153').length;
+      const supervisionSessions = sessions.filter(s => s.cptCode === '97155').length;
+      const supervisionCompliance = rbtSessions > 0 ? ((supervisionSessions / rbtSessions) * 100).toFixed(1) : 0;
+
+      const summaryData = [
+        { 'Metric': 'Total Sessions', 'Value': totalSessions },
+        { 'Metric': 'Total Units Billed', 'Value': totalUnits },
+        { 'Metric': 'Total Minutes', 'Value': totalMinutes },
+        { 'Metric': 'Total Clients', 'Value': clients.length },
+        { 'Metric': 'Total Providers', 'Value': providers.length },
+        { 'Metric': 'RBT Sessions (97153)', 'Value': rbtSessions },
+        { 'Metric': 'Supervision Sessions (97155)', 'Value': supervisionSessions },
+        { 'Metric': 'Supervision Compliance %', 'Value': supervisionCompliance + '%' },
+        { 'Metric': 'Export Date', 'Value': new Date().toLocaleString() },
+        { 'Metric': 'Exported By', 'Value': currentUser?.fullName || currentUser?.username || '' }
+      ];
+      const summarySheet = XLSX.utils.json_to_sheet(summaryData);
+      XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
+
+      // Generate Excel file
+      const filename = `bcba-export-${currentUser?.username || 'data'}-${new Date().toISOString().split('T')[0]}.xlsx`;
+      XLSX.writeFile(wb, filename);
+      
+      return true;
+    } catch (error) {
+      console.error('Excel export error:', error);
+      throw error;
+    }
+  };
+
+  const importFromExcel = (file) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+
+        let importedClients = [];
+        let importedSessions = [];
+        let importedProviders = [];
+
+        // Import Clients
+        if (workbook.SheetNames.includes('Clients')) {
+          const clientsSheet = workbook.Sheets['Clients'];
+          const clientsArray = XLSX.utils.sheet_to_json(clientsSheet);
+          importedClients = clientsArray.map(row => ({
+            id: 'client-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+            name: row['Name'] || '',
+            clientId: row['Client ID'] || '',
+            priorAuthNumber: row['Prior Auth Number'] || '',
+            diagnosisCode: row['Diagnosis Code'] || '',
+            createdAt: new Date().toISOString()
+          })).filter(c => c.name);
+        }
+
+        // Import Providers
+        if (workbook.SheetNames.includes('Providers')) {
+          const providersSheet = workbook.Sheets['Providers'];
+          const providersArray = XLSX.utils.sheet_to_json(providersSheet);
+          importedProviders = providersArray.map(row => ({
+            id: 'provider-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+            name: row['Name'] || '',
+            type: row['Type'] || 'RBT',
+            npi: row['NPI Number'] || '',
+            credentials: row['Credentials'] || '',
+            createdAt: new Date().toISOString()
+          })).filter(p => p.name);
+        }
+
+        // Import Sessions (need to match clients and providers)
+        if (workbook.SheetNames.includes('Sessions')) {
+          const sessionsSheet = workbook.Sheets['Sessions'];
+          const sessionsArray = XLSX.utils.sheet_to_json(sessionsSheet);
+          
+          importedSessions = sessionsArray.map(row => {
+            // Find matching client
+            const clientName = row['Client Name'] || '';
+            const matchingClient = importedClients.find(c => c.name === clientName) || clients.find(c => c.name === clientName);
+            
+            // Find matching provider
+            const providerName = row['Provider'] || '';
+            const matchingProvider = importedProviders.find(p => p.name === providerName) || providers.find(p => p.name === providerName);
+
+            if (!matchingClient || !matchingProvider) return null;
+
+            // Parse date and time
+            const dateStr = row['Date'] || new Date().toLocaleDateString();
+            const startTimeStr = row['Start Time'] || '09:00:00';
+            const endTimeStr = row['End Time'] && row['End Time'] !== 'In Progress' ? row['End Time'] : null;
+
+            return {
+              id: 'session-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+              clientId: matchingClient.id,
+              providerId: matchingProvider.id,
+              cptCode: row['CPT Code'] || '97153',
+              location: row['Location'] || 'Clinic',
+              startTime: new Date(dateStr + ' ' + startTimeStr).toISOString(),
+              endTime: endTimeStr ? new Date(dateStr + ' ' + endTimeStr).toISOString() : null,
+              durationMinutes: parseInt(row['Duration (min)']) || 0,
+              units: parseInt(row['Units']) || 0,
+              notes: row['Notes'] || '',
+              status: row['Status'] || 'completed'
+            };
+          }).filter(s => s !== null);
+        }
+
+        // Confirm import
+        const message = `Import ${importedClients.length} clients, ${importedProviders.length} providers, and ${importedSessions.length} sessions?\n\nThis will ADD to your existing data (not replace).`;
+        
+        if (confirm(message)) {
+          // Merge with existing data
+          const newClients = [...clients, ...importedClients];
+          const newProviders = [...providers, ...importedProviders];
+          const newSessions = [...sessions, ...importedSessions];
+
+          setClients(newClients);
+          setProviders(newProviders);
+          setSessions(newSessions);
+
+          saveData('clients', newClients);
+          saveData('providers', newProviders);
+          saveData('sessions', newSessions);
+
+          alert(`Successfully imported:\n${importedClients.length} clients\n${importedProviders.length} providers\n${importedSessions.length} sessions`);
+        }
+      } catch (error) {
+        console.error('Excel import error:', error);
+        alert('Error importing Excel file. Please make sure it\'s a valid BCBA Tracker export file.');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
   // CPT Codes for Indiana BCBA billing
   const cptCodes = [
     { code: '97151', name: 'Behavior ID Assessment', requiresClient: true, maxUnits: 971 },
@@ -1446,6 +1634,50 @@ const BCBABillingTracker = () => {
             <p className="text-sm text-gray-600 mb-3">All data is stored locally on your device and persists between sessions</p>
             
             <div className="space-y-2">
+              {/* Excel Export */}
+              <button
+                onClick={() => {
+                  if (confirm('Export all data to Excel? This will create a spreadsheet with all your sessions, clients, and providers.')) {
+                    try {
+                      exportToExcel();
+                      alert('Excel file downloaded successfully!');
+                    } catch (error) {
+                      console.error('Excel export error:', error);
+                      alert('Error creating Excel file. Please try again.');
+                    }
+                  }
+                }}
+                className="w-full bg-emerald-600 text-white py-2 px-4 rounded-lg font-semibold active:bg-emerald-700 flex items-center justify-center gap-2"
+              >
+                <FileText className="w-4 h-4" />
+                Export to Excel
+              </button>
+
+              {/* Excel Import */}
+              <button
+                onClick={() => {
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = '.xlsx,.xls';
+                  input.onchange = async (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      importFromExcel(file);
+                    }
+                  };
+                  input.click();
+                }}
+                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg font-semibold active:bg-blue-700 flex items-center justify-center gap-2"
+              >
+                <FileText className="w-4 h-4" />
+                Import from Excel
+              </button>
+
+              <div className="border-t border-gray-200 my-3 pt-3">
+                <p className="text-xs text-gray-500 mb-2">JSON Format (for backup/advanced users)</p>
+              </div>
+
+              {/* JSON Export */}
               <button
                 onClick={() => {
                   if (confirm('Export all data? This will generate a JSON file with all your sessions, clients, and providers.')) {
@@ -1458,11 +1690,13 @@ const BCBABillingTracker = () => {
                     a.click();
                   }
                 }}
-                className="w-full bg-green-600 text-white py-2 px-4 rounded-lg font-semibold"
+                className="w-full bg-green-600 text-white py-2 px-4 rounded-lg font-semibold active:bg-green-700"
               >
-                Export Data
+                Export Data (JSON)
               </button>
               
+              {/* JSON Import */}
+              {/* JSON Import */}
               <button
                 onClick={() => {
                   const input = document.createElement('input');
@@ -1499,9 +1733,9 @@ const BCBABillingTracker = () => {
                   };
                   input.click();
                 }}
-                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg font-semibold"
+                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg font-semibold active:bg-blue-700"
               >
-                Import Data
+                Import Data (JSON)
               </button>
               
               <button
@@ -1996,4 +2230,5 @@ const BCBABillingTracker = () => {
   );
 };
 
-export default BCBABillingTracker;
+// Make component available globally for browser use
+window.BCBABillingTracker = BCBABillingTracker;

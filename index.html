@@ -29,6 +29,9 @@
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     
+    <!-- SheetJS for Excel Import/Export -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    
     <style>
         * {
             -webkit-tap-highlight-color: transparent;
@@ -234,15 +237,99 @@
     <script type="text/babel" src="app.js"></script>
 
     <script type="text/babel">
-        // Hide loading screen and show app
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('root').style.display = 'block';
-        
-        // Render the app
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<BCBABillingTracker />);
-        
-        console.log('✅ BCBA Billing Tracker loaded successfully!');
+        // Function to initialize app
+        const initializeApp = () => {
+            try {
+                // Check required libraries
+                if (typeof React === 'undefined') {
+                    throw new Error('React not loaded');
+                }
+                if (typeof ReactDOM === 'undefined') {
+                    throw new Error('ReactDOM not loaded');
+                }
+                if (typeof XLSX === 'undefined') {
+                    console.warn('⚠️ SheetJS (XLSX) not loaded - Excel features may not work');
+                }
+                if (typeof lucide === 'undefined') {
+                    console.warn('⚠️ Lucide icons not loaded - icons may not display');
+                }
+
+                // Check if component is available
+                if (typeof window.BCBABillingTracker === 'undefined') {
+                    throw new Error('BCBABillingTracker component not loaded');
+                }
+
+                console.log('✅ All libraries loaded successfully');
+
+                // Hide loading screen
+                const loading = document.getElementById('loading');
+                const root = document.getElementById('root');
+                
+                if (loading) loading.style.display = 'none';
+                if (root) root.style.display = 'block';
+                
+                // Render the app
+                const reactRoot = ReactDOM.createRoot(root);
+                reactRoot.render(React.createElement(window.BCBABillingTracker));
+                
+                console.log('✅ BCBA Billing Tracker loaded successfully!');
+            } catch (error) {
+                console.error('❌ Error initializing app:', error);
+                const loading = document.getElementById('loading');
+                if (loading) {
+                    loading.innerHTML = `
+                        <div style="text-align: center; color: white; padding: 20px;">
+                            <h2 style="margin: 0; font-size: 24px; color: #ff6b6b;">Error Loading App</h2>
+                            <p style="margin: 20px 0;">${error.message}</p>
+                            <p style="margin: 10px 0; font-size: 14px;">Please try the following:</p>
+                            <ul style="text-align: left; display: inline-block; margin: 20px auto;">
+                                <li>Refresh the page (Ctrl+F5 or Cmd+Shift+R)</li>
+                                <li>Clear browser cache</li>
+                                <li>Try a different browser</li>
+                                <li>Check browser console (F12) for details</li>
+                            </ul>
+                            <button onclick="location.reload()" style="background: white; color: #667eea; border: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 20px; font-size: 16px;">
+                                🔄 Refresh Page
+                            </button>
+                        </div>
+                    `;
+                }
+            }
+        };
+
+        // Wait for Babel to compile and execute the app.js file
+        // Use a small delay to ensure app.js has been processed
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                setTimeout(initializeApp, 100);
+            });
+        } else {
+            setTimeout(initializeApp, 100);
+        }
+
+        // Timeout fallback
+        setTimeout(() => {
+            const loading = document.getElementById('loading');
+            if (loading && loading.style.display !== 'none') {
+                console.error('❌ App loading timeout');
+                loading.innerHTML = `
+                    <div style="text-align: center; color: white; padding: 20px;">
+                        <h2 style="margin: 0; font-size: 24px; color: #ff6b6b;">⏱️ Loading Timeout</h2>
+                        <p style="margin: 20px 0;">The app is taking longer than expected to load.</p>
+                        <p style="margin: 10px 0; font-size: 14px;">This might be due to:</p>
+                        <ul style="text-align: left; display: inline-block; margin: 20px auto;">
+                            <li>Slow internet connection</li>
+                            <li>Large app.js file being compiled</li>
+                            <li>Browser blocking scripts</li>
+                        </ul>
+                        <p style="margin: 20px 0; font-size: 12px;">Check browser console (F12) for errors</p>
+                        <button onclick="location.reload()" style="background: white; color: #667eea; border: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 16px;">
+                            🔄 Refresh Page
+                        </button>
+                    </div>
+                `;
+            }
+        }, 30000);
     </script>
 </body>
 </html>
