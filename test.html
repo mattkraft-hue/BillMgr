@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BCBA Tracker - Browser Compatibility Test</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            color: #333;
+        }
+        h1 { color: #667eea; margin-bottom: 20px; }
+        h2 { color: #764ba2; margin-top: 30px; margin-bottom: 15px; font-size: 20px; }
+        .test-item {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+        }
+        .pass { background: #d4edda; border-color: #28a745; }
+        .fail { background: #f8d7da; border-color: #dc3545; }
+        .warn { background: #fff3cd; border-color: #ffc107; }
+        .status { font-weight: bold; margin-right: 10px; }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover { background: #5568d3; }
+        .info { background: #e7f3ff; padding: 15px; border-radius: 8px; margin: 20px 0; }
+        code { background: #f4f4f4; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 BCBA Billing Tracker - Browser Compatibility Test</h1>
+        
+        <div class="info">
+            <strong>What is this?</strong><br>
+            This page tests if your browser can run the BCBA Billing Tracker app.
+            All tests should show ✅ PASS for the app to work properly.
+        </div>
+
+        <h2>Browser Information</h2>
+        <div id="browser-info"></div>
+
+        <h2>Required Features</h2>
+        <div id="test-results"></div>
+
+        <h2>Optional Features</h2>
+        <div id="optional-tests"></div>
+
+        <h2>Quick Actions</h2>
+        <button onclick="window.location.href='index.html'">🚀 Launch BCBA Tracker</button>
+        <button onclick="runTests()">🔄 Re-run Tests</button>
+        <button onclick="window.location.href='https://mattkraft-hue.github.io/BillMgr/'">🌐 Visit GitHub Pages</button>
+
+        <div class="info" style="margin-top: 30px;">
+            <strong>Need help?</strong><br>
+            If any tests fail, see <code>TROUBLESHOOTING.md</code> or try a different browser (Chrome recommended).
+        </div>
+    </div>
+
+    <script>
+        function showBrowserInfo() {
+            const info = document.getElementById('browser-info');
+            const ua = navigator.userAgent;
+            
+            let browser = 'Unknown';
+            if (ua.indexOf('Chrome') > -1) browser = 'Chrome';
+            else if (ua.indexOf('Firefox') > -1) browser = 'Firefox';
+            else if (ua.indexOf('Safari') > -1) browser = 'Safari';
+            else if (ua.indexOf('Edge') > -1) browser = 'Edge';
+            else if (ua.indexOf('MSIE') > -1 || ua.indexOf('Trident') > -1) browser = 'Internet Explorer';
+            
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+            const platform = isMobile ? '📱 Mobile' : '💻 Desktop';
+            
+            info.innerHTML = `
+                <div class="test-item">
+                    <strong>Browser:</strong> ${browser}<br>
+                    <strong>Platform:</strong> ${platform}<br>
+                    <strong>Screen:</strong> ${window.innerWidth} × ${window.innerHeight}<br>
+                    <strong>User Agent:</strong> ${ua.substring(0, 100)}...
+                </div>
+            `;
+        }
+
+        function runTests() {
+            const tests = [
+                {
+                    name: 'JavaScript Enabled',
+                    test: () => true,
+                    required: true
+                },
+                {
+                    name: 'localStorage Support',
+                    test: () => {
+                        try {
+                            localStorage.setItem('test', 'test');
+                            localStorage.removeItem('test');
+                            return true;
+                        } catch(e) {
+                            return false;
+                        }
+                    },
+                    required: true
+                },
+                {
+                    name: 'Modern JavaScript (ES6)',
+                    test: () => {
+                        try {
+                            eval('const test = () => true; test();');
+                            return true;
+                        } catch(e) {
+                            return false;
+                        }
+                    },
+                    required: true
+                },
+                {
+                    name: 'Fetch API',
+                    test: () => typeof fetch !== 'undefined',
+                    required: true
+                },
+                {
+                    name: 'Promises',
+                    test: () => typeof Promise !== 'undefined',
+                    required: true
+                },
+                {
+                    name: 'Web Crypto API',
+                    test: () => typeof crypto !== 'undefined' && typeof crypto.subtle !== 'undefined',
+                    required: true
+                },
+                {
+                    name: 'File API',
+                    test: () => typeof File !== 'undefined' && typeof FileReader !== 'undefined',
+                    required: true
+                },
+                {
+                    name: 'Blob API',
+                    test: () => typeof Blob !== 'undefined',
+                    required: true
+                }
+            ];
+
+            const optionalTests = [
+                {
+                    name: 'Service Worker Support',
+                    test: () => 'serviceWorker' in navigator,
+                    note: 'For offline functionality'
+                },
+                {
+                    name: 'IndexedDB Support',
+                    test: () => typeof indexedDB !== 'undefined',
+                    note: 'For future features'
+                },
+                {
+                    name: 'Notifications API',
+                    test: () => 'Notification' in window,
+                    note: 'For future notifications'
+                },
+                {
+                    name: 'Install Prompt Support',
+                    test: () => {
+                        const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+                        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                        return isIOS || 'BeforeInstallPromptEvent' in window || isStandalone;
+                    },
+                    note: 'For PWA installation'
+                }
+            ];
+
+            // Run required tests
+            let resultsHTML = '';
+            let allPassed = true;
+            
+            tests.forEach(test => {
+                const passed = test.test();
+                if (!passed) allPassed = false;
+                const status = passed ? '✅ PASS' : '❌ FAIL';
+                const className = passed ? 'pass' : 'fail';
+                
+                resultsHTML += `
+                    <div class="test-item ${className}">
+                        <span class="status">${status}</span>
+                        <strong>${test.name}</strong>
+                        ${!passed ? '<br><small>⚠️ Required for app to function</small>' : ''}
+                    </div>
+                `;
+            });
+
+            document.getElementById('test-results').innerHTML = resultsHTML;
+
+            // Run optional tests
+            let optionalHTML = '';
+            
+            optionalTests.forEach(test => {
+                const passed = test.test();
+                const status = passed ? '✅ YES' : '⚠️ NO';
+                const className = passed ? 'pass' : 'warn';
+                
+                optionalHTML += `
+                    <div class="test-item ${className}">
+                        <span class="status">${status}</span>
+                        <strong>${test.name}</strong>
+                        <br><small>${test.note}</small>
+                    </div>
+                `;
+            });
+
+            document.getElementById('optional-tests').innerHTML = optionalHTML;
+
+            // Show overall result
+            if (allPassed) {
+                document.getElementById('test-results').innerHTML = `
+                    <div class="test-item pass" style="margin-bottom: 20px; font-size: 18px;">
+                        <strong>🎉 All Required Tests Passed!</strong><br>
+                        <small>Your browser is fully compatible with BCBA Billing Tracker</small>
+                    </div>
+                ` + resultsHTML;
+            } else {
+                document.getElementById('test-results').innerHTML = `
+                    <div class="test-item fail" style="margin-bottom: 20px; font-size: 18px;">
+                        <strong>⚠️ Some Tests Failed</strong><br>
+                        <small>Your browser may not support all features. Try Chrome, Firefox, or Edge.</small>
+                    </div>
+                ` + resultsHTML;
+            }
+        }
+
+        // Run tests on page load
+        window.addEventListener('load', () => {
+            showBrowserInfo();
+            runTests();
+        });
+    </script>
+</body>
+</html>

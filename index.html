@@ -234,102 +234,103 @@
     </script>
 
     <!-- Load and Render App -->
+    <script>
+        // Add detailed logging to see where it's failing
+        console.log('🔍 Step 1: Starting app initialization...');
+        
+        // Check if required libraries are loaded
+        console.log('🔍 Step 2: Checking libraries...');
+        console.log('  - React:', typeof React !== 'undefined' ? '✅' : '❌');
+        console.log('  - ReactDOM:', typeof ReactDOM !== 'undefined' ? '✅' : '❌');
+        console.log('  - Babel:', typeof Babel !== 'undefined' ? '✅' : '❌');
+        console.log('  - XLSX:', typeof XLSX !== 'undefined' ? '✅' : '❌');
+        console.log('  - lucide:', typeof lucide !== 'undefined' ? '✅' : '❌');
+    </script>
+
+    <!-- Load app.js with Babel transform -->
+    <script type="text/babel" data-type="module" data-presets="react">
+        console.log('🔍 Step 3: Loading app.js with Babel...');
+    </script>
     <script type="text/babel" src="app.js"></script>
 
-    <script type="text/babel">
-        // Function to initialize app
-        const initializeApp = () => {
-            try {
-                // Check required libraries
-                if (typeof React === 'undefined') {
-                    throw new Error('React not loaded');
-                }
-                if (typeof ReactDOM === 'undefined') {
-                    throw new Error('ReactDOM not loaded');
-                }
-                if (typeof XLSX === 'undefined') {
-                    console.warn('⚠️ SheetJS (XLSX) not loaded - Excel features may not work');
-                }
-                if (typeof lucide === 'undefined') {
-                    console.warn('⚠️ Lucide icons not loaded - icons may not display');
-                }
-
-                // Check if component is available
-                if (typeof window.BCBABillingTracker === 'undefined') {
-                    throw new Error('BCBABillingTracker component not loaded');
-                }
-
-                console.log('✅ All libraries loaded successfully');
-
-                // Hide loading screen
-                const loading = document.getElementById('loading');
-                const root = document.getElementById('root');
+    <script>
+        console.log('🔍 Step 4: Waiting for Babel compilation...');
+        
+        // Function to check if app is ready
+        let checkCount = 0;
+        const maxChecks = 60; // 60 seconds max
+        
+        const checkAndRender = setInterval(() => {
+            checkCount++;
+            console.log(`🔍 Step 5: Check #${checkCount} - Looking for BCBABillingTracker...`);
+            
+            if (typeof window.BCBABillingTracker !== 'undefined') {
+                clearInterval(checkAndRender);
+                console.log('✅ Step 6: Component found! Rendering...');
                 
-                if (loading) loading.style.display = 'none';
-                if (root) root.style.display = 'block';
-                
-                // Render the app
-                const reactRoot = ReactDOM.createRoot(root);
-                reactRoot.render(React.createElement(window.BCBABillingTracker));
-                
-                console.log('✅ BCBA Billing Tracker loaded successfully!');
-            } catch (error) {
-                console.error('❌ Error initializing app:', error);
-                const loading = document.getElementById('loading');
-                if (loading) {
-                    loading.innerHTML = `
-                        <div style="text-align: center; color: white; padding: 20px;">
-                            <h2 style="margin: 0; font-size: 24px; color: #ff6b6b;">Error Loading App</h2>
-                            <p style="margin: 20px 0;">${error.message}</p>
-                            <p style="margin: 10px 0; font-size: 14px;">Please try the following:</p>
-                            <ul style="text-align: left; display: inline-block; margin: 20px auto;">
-                                <li>Refresh the page (Ctrl+F5 or Cmd+Shift+R)</li>
-                                <li>Clear browser cache</li>
-                                <li>Try a different browser</li>
-                                <li>Check browser console (F12) for details</li>
-                            </ul>
-                            <button onclick="location.reload()" style="background: white; color: #667eea; border: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 20px; font-size: 16px;">
+                try {
+                    // Hide loading screen
+                    const loading = document.getElementById('loading');
+                    const root = document.getElementById('root');
+                    
+                    if (loading) loading.style.display = 'none';
+                    if (root) root.style.display = 'block';
+                    
+                    console.log('✅ Step 7: Creating React root...');
+                    const reactRoot = ReactDOM.createRoot(root);
+                    
+                    console.log('✅ Step 8: Rendering component...');
+                    reactRoot.render(React.createElement(window.BCBABillingTracker));
+                    
+                    console.log('✅ SUCCESS: BCBA Billing Tracker loaded successfully!');
+                } catch (error) {
+                    console.error('❌ Render error:', error);
+                    showError('Render Error', error.message);
+                }
+            } else if (checkCount >= maxChecks) {
+                clearInterval(checkAndRender);
+                console.error('❌ Timeout: Component not loaded after 60 seconds');
+                showError('Loading Timeout', 
+                    'The app component did not load. This usually means:\n' +
+                    '1. app.js is too large for Babel to compile\n' +
+                    '2. There is a syntax error in app.js\n' +
+                    '3. Network is too slow\n\n' +
+                    'Check the browser console (F12) for detailed error messages.'
+                );
+            }
+            
+            // Show progress every 5 seconds
+            if (checkCount % 5 === 0) {
+                console.log(`⏳ Still waiting... (${checkCount} seconds elapsed)`);
+            }
+        }, 1000); // Check every second
+        
+        function showError(title, message) {
+            const loading = document.getElementById('loading');
+            if (loading) {
+                loading.innerHTML = `
+                    <div style="text-align: center; color: white; padding: 20px; max-width: 600px;">
+                        <h2 style="margin: 0; font-size: 24px; color: #ff6b6b; margin-bottom: 20px;">
+                            ${title}
+                        </h2>
+                        <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 12px; margin: 20px 0; text-align: left;">
+                            <pre style="white-space: pre-wrap; font-size: 14px; margin: 0;">${message}</pre>
+                        </div>
+                        <div style="margin-top: 30px;">
+                            <button onclick="location.reload()" style="background: white; color: #667eea; border: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; margin: 5px;">
                                 🔄 Refresh Page
                             </button>
+                            <button onclick="window.open('test.html', '_blank')" style="background: rgba(255,255,255,0.2); color: white; border: 2px solid white; padding: 12px 24px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; margin: 5px;">
+                                🔍 Test Browser
+                            </button>
                         </div>
-                    `;
-                }
-            }
-        };
-
-        // Wait for Babel to compile and execute the app.js file
-        // Use a small delay to ensure app.js has been processed
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => {
-                setTimeout(initializeApp, 100);
-            });
-        } else {
-            setTimeout(initializeApp, 100);
-        }
-
-        // Timeout fallback
-        setTimeout(() => {
-            const loading = document.getElementById('loading');
-            if (loading && loading.style.display !== 'none') {
-                console.error('❌ App loading timeout');
-                loading.innerHTML = `
-                    <div style="text-align: center; color: white; padding: 20px;">
-                        <h2 style="margin: 0; font-size: 24px; color: #ff6b6b;">⏱️ Loading Timeout</h2>
-                        <p style="margin: 20px 0;">The app is taking longer than expected to load.</p>
-                        <p style="margin: 10px 0; font-size: 14px;">This might be due to:</p>
-                        <ul style="text-align: left; display: inline-block; margin: 20px auto;">
-                            <li>Slow internet connection</li>
-                            <li>Large app.js file being compiled</li>
-                            <li>Browser blocking scripts</li>
-                        </ul>
-                        <p style="margin: 20px 0; font-size: 12px;">Check browser console (F12) for errors</p>
-                        <button onclick="location.reload()" style="background: white; color: #667eea; border: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 16px;">
-                            🔄 Refresh Page
-                        </button>
+                        <p style="margin-top: 20px; font-size: 12px; opacity: 0.8;">
+                            Press F12 to open Developer Console for more details
+                        </p>
                     </div>
                 `;
             }
-        }, 30000);
+        }
     </script>
 </body>
 </html>
